@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wallet Verification</title>
+</head>
+<body>
+  <h2>Verify Your Wallet</h2>
+  <p>Click the button below to connect your Phantom wallet and sign the verification message.</p>
+  <button id="connect">Connect Phantom & Sign</button>
+
+  <!-- Include bs58 library to convert signature to Base58 -->
+  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js"></script>
+
+  <script>
+    const connectButton = document.getElementById("connect");
+
+    connectButton.onclick = async () => {
+      if (!window.solana || !window.solana.isPhantom) {
+        alert("Phantom Wallet is required! Please install Phantom from https://phantom.app/");
+        return;
+      }
+
+      // Connect wallet
+      const resp = await window.solana.connect();
+      const walletAddress = resp.publicKey.toString();
+
+      // Get nonce and user ID from URL query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const nonce = urlParams.get("nonce");
+      const userId = urlParams.get("user");
+
+      if (!nonce) {
+        alert("Nonce missing in URL!");
+        return;
+      }
+
+      // Construct the exact message the bot expects
+      const message = `Verify wallet ${walletAddress} nonce ${nonce} at ${Date.now()}`;
+
+      // Encode and sign the message
+      const encodedMessage = new TextEncoder().encode(message);
+      const signedMessage = await window.solana.signMessage(encodedMessage, "utf8");
+
+      // Convert signature to Base58
+      const signatureBase58 = bs58.encode(signedMessage.signature);
+
+      // Redirect to Telegram bot with /confirm command
+      const telegramBotUsername = "WalletWarden"; // Replace with your bot username
+      const telegramUrl = `https://t.me/${telegramBotUsername}?start=confirm_${walletAddress}_${signatureBase58}`;
+      window.location.href = telegramUrl;
+    };
+  </script>
+</body>
+</html>

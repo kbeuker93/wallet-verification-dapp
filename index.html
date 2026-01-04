@@ -12,18 +12,15 @@
       margin: auto;
       text-align: center;
     }
-
     button {
       padding: 15px 25px;
       font-size: 16px;
       cursor: pointer;
     }
-
     .status {
       margin-top: 20px;
       font-size: 15px;
     }
-
     .success { color: green; }
     .error { color: red; }
   </style>
@@ -31,65 +28,86 @@
 
 <body>
   <h2>🔐 Wallet Verification</h2>
-
   <p>
-    Connect your Phantom wallet and sign a message to verify ownership.
-    <br />
+    Connect your Phantom wallet and sign a message to verify ownership.<br />
     <strong>No funds will be moved.</strong>
   </p>
 
   <button id="verifyBtn">Connect Phantom & Verify</button>
-
   <div id="status" class="status"></div>
 
   <script>
+    // ---------- Base58 encoder (minimal, reliable) ----------
+    const BASE58_ALPHABET =
+      "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+    function base58Encode(buffer) {
+      let digits = [0];
+      for (let i = 0; i < buffer.length; i++) {
+        let carry = buffer[i];
+        for (let j = 0; j < digits.length; j++) {
+          carry += digits[j] << 8;
+          digits[j] = carry % 58;
+          carry = (carry / 58) | 0;
+        }
+        while (carry) {
+          digits.push(carry % 58);
+          carry = (carry / 58) | 0;
+        }
+      }
+      return digits
+        .reverse()
+        .map((d) => BASE58_ALPHABET[d])
+        .join("");
+    }
+
+    // ---------- Config ----------
     const verifyBtn = document.getElementById("verifyBtn");
     const statusDiv = document.getElementById("status");
 
-    // 🔧 CHANGE THIS to your Railway backend URL
-    const BACKEND_URL = "https://wallet-verification-backend-production.up.railway.app";
+    const BACKEND_URL =
+      "https://wallet-verification-backend-production.up.railway.app";
 
-    // Read query params
     const params = new URLSearchParams(window.location.search);
     const walletFromUrl = params.get("wallet");
     const nonce = params.get("nonce");
     const userId = params.get("user");
 
     if (!walletFromUrl || !nonce || !userId) {
-      statusDiv.innerHTML = "<p class='error'>❌ Invalid verification link.</p>";
+      statusDiv.innerHTML =
+        "<p class='error'>❌ Invalid verification link.</p>";
       verifyBtn.disabled = true;
     }
 
     verifyBtn.onclick = async () => {
       try {
         if (!window.solana || !window.solana.isPhantom) {
-          alert("Phantom Wallet is required. Install it from https://phantom.app");
+          alert("Phantom Wallet is required: https://phantom.app");
           return;
         }
 
-        statusDiv.innerHTML = "⏳ Connecting to Phantom...";
+        statusDiv.textContent = "⏳ Connecting to Phantom…";
 
         const resp = await window.solana.connect();
         const walletAddress = resp.publicKey.toString();
 
         if (walletAddress !== walletFromUrl) {
           statusDiv.innerHTML =
-            "<p class='error'>❌ Connected wallet does not match verification request.</p>";
+            "<p class='error'>❌ Wallet mismatch.</p>";
           return;
         }
 
-        // IMPORTANT: must match backend EXACTLY
         const message = `Verify wallet ${walletAddress} nonce ${nonce}`;
         const encodedMessage = new TextEncoder().encode(message);
 
-        const signed = await window.solana.signMessage(encodedMessage, "utf8");
-
-        // ✅ Phantom exposes base58 encoding directly
-        const signatureBase58 = window.solana.utils.bytes.bs58.encode(
-          signed.signature
+        const signed = await window.solana.signMessage(
+          encodedMessage,
+          "utf8"
         );
 
-        statusDiv.innerHTML = "⏳ Verifying signature...";
+        const signatureBase58 = base58Encode(signed.signature);
+
+        statusDiv.textContent = "⏳ Verifying signature…";
 
         const res = await fetch(`${BACKEND_URL}/verify-signature`, {
           method: "POST",
@@ -98,8 +116,8 @@
             wallet: walletAddress,
             nonce: nonce,
             user: userId,
-            signature: signatureBase58
-          })
+            signature: signatureBase58,
+          }),
         });
 
         const data = await res.json();
@@ -109,12 +127,12 @@
         }
 
         statusDiv.innerHTML =
-          "<p class='success'>✅ Wallet verified successfully! You can return to Telegram.</p>";
-
+          "<p class='success'>✅ Wallet verified! Return to Telegram.</p>";
         verifyBtn.disabled = true;
 
       } catch (err) {
-        statusDiv.innerHTML = `<p class='error'>❌ ${err.message}</p>`;
+        statusDiv.innerHTML =
+          `<p class='error'>❌ ${err.message}</p>`;
       }
     };
   </script>

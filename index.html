@@ -41,38 +41,38 @@
   </style>
 </head>
 
-<body class="min-h-screen flex items-start justify-center text-white pt-10 sm:pt-16">
+<body class="min-h-screen flex items-start justify-center text-white pt-8 sm:pt-12">
 
-  <main class="w-full max-w-md px-4 -mt-20">
+  <main class="w-full max-w-md px-4 -mt-28">
 
     <!-- Logo -->
-    <div class="mx-auto mb-3 max-w-md">
+    <div class="mx-auto mb-2 max-w-md">
       <img
         src="assets/logo.png"
         alt="Wallet Verification Bot Logo"
         class="w-full h-auto object-contain
-               drop-shadow-[0_0_40px_rgba(153,69,255,0.45)]"
+               drop-shadow-[0_0_35px_rgba(153,69,255,0.45)]"
       />
     </div>
 
     <!-- WalletWarden text -->
-    <div class="mx-auto mb-2 max-w-md -mt-4">
+    <div class="mx-auto mb-1 max-w-md -mt-8">
       <img
         src="assets/walletwarden-text.png"
         alt="WalletWarden"
         class="w-full h-auto object-contain
-               drop-shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+               drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]"
       />
     </div>
 
     <!-- Glass card -->
-    <section class="glass rounded-2xl p-8 shadow-2xl text-center -mt-8">
+    <section class="glass rounded-2xl p-7 shadow-2xl text-center -mt-12">
 
-      <h2 class="text-2xl font-semibold mb-2">
+      <h2 class="text-xl font-semibold mb-2">
         🔐 Wallet Verification
       </h2>
 
-      <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+      <p class="text-sm text-gray-300 mb-5 leading-relaxed">
         Connect your Phantom wallet and sign a message to verify ownership.
         <br />
         <span class="font-medium text-gray-200">
@@ -82,7 +82,7 @@
 
       <button
         id="verifyBtn"
-        class="w-full py-4 rounded-xl font-medium text-base
+        class="w-full py-3.5 rounded-xl font-medium text-base
                bg-gradient-to-r from-purple-500 to-cyan-400
                hover:from-purple-600 hover:to-cyan-500
                transition-all duration-200
@@ -92,15 +92,20 @@
         Connect Phantom & Verify
       </button>
 
-      <div id="status" class="status mt-5 text-sm"></div>
+      <div id="status" class="status mt-4 text-sm"></div>
 
-      <p class="mt-6 text-xs text-gray-400">
+      <p class="mt-4 text-[11px] text-gray-400">
         Signatures are used for verification only.<br />
         Your private keys never leave your wallet.
       </p>
 
     </section>
   </main>
+
+  <!-- Footer -->
+  <footer class="fixed bottom-3 left-0 right-0 text-center text-[10px] text-gray-500 pointer-events-none">
+    © 2026 WalletWarden. All rights reserved.
+  </footer>
 
   <script>
     // ---------- Base58 encoder (minimal, reliable) ----------

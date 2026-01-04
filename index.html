@@ -48,7 +48,7 @@
   <div id="status" class="status"></div>
 
   <!-- Base58 library -->
-  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js"></script>
+  <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
 
   <script>
     const verifyBtn = document.getElementById("verifyBtn");
@@ -93,7 +93,7 @@
         const encodedMessage = new TextEncoder().encode(message);
         const signed = await window.solana.signMessage(encodedMessage, "utf8");
 
-        const signatureBase58 = bs58.encode(signed.signature);
+        const signatureBase58 = window.bs58.encode(signed.signature);
 
         statusDiv.innerHTML = "⏳ Verifying signature...";
 

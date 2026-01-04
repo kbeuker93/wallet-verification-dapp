@@ -1,92 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Wallet Verification</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 30px;
+      padding: 40px;
       max-width: 600px;
       margin: auto;
       text-align: center;
     }
+
     button {
       padding: 15px 25px;
       font-size: 16px;
       cursor: pointer;
     }
-    textarea {
-      width: 100%;
-      height: 100px;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-    #instructions {
+
+    .status {
       margin-top: 20px;
-      font-size: 14px;
-      text-align: left;
+      font-size: 15px;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
     }
   </style>
 </head>
+
 <body>
-  <h2>Wallet Verification</h2>
-  <p>Click the button below to connect your Phantom wallet and sign the verification message.</p>
-  <button id="connect">Connect Phantom & Sign</button>
+  <h2>🔐 Wallet Verification</h2>
 
-  <div id="result" style="display:none;">
-    <h3>✅ Wallet Signed Successfully!</h3>
-    <p>Copy the signature below and send it to the Telegram bot using the <code>/confirm</code> command:</p>
-    <textarea id="signature" readonly></textarea>
-    <div id="instructions">
-      Example command:<br>
-      <code>/confirm &lt;your_wallet_address&gt; &lt;signed_message_here&gt;</code>
-    </div>
-  </div>
+  <p>
+    Click the button below to connect your Phantom wallet and securely verify ownership.
+    <br />
+    <strong>No funds will be moved.</strong>
+  </p>
 
-  <!-- Include bs58 library to convert signature to Base58 -->
+  <button id="verifyBtn">Connect Phantom & Verify</button>
+
+  <div id="status" class="status"></div>
+
+  <!-- Base58 library -->
   <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js"></script>
 
   <script>
-    const connectButton = document.getElementById("connect");
-    const resultDiv = document.getElementById("result");
-    const signatureBox = document.getElementById("signature");
+    const verifyBtn = document.getElementById("verifyBtn");
+    const statusDiv = document.getElementById("status");
 
-    connectButton.onclick = async () => {
-      if (!window.solana || !window.solana.isPhantom) {
-        alert("Phantom Wallet is required! Please install Phantom from https://phantom.app/");
-        return;
+    // === CONFIG ===
+    const BACKEND_URL = "https://kbeuker93.github.io/wallet-verification-dapp/";
+
+    // === Read query params ===
+    const params = new URLSearchParams(window.location.search);
+    const walletFromUrl = params.get("wallet");
+    const nonce = params.get("nonce");
+    const userId = params.get("user");
+
+    if (!walletFromUrl || !nonce || !userId) {
+      statusDiv.innerHTML = "<p class='error'>❌ Invalid verification link.</p>";
+      verifyBtn.disabled = true;
+    }
+
+    verifyBtn.onclick = async () => {
+      try {
+        if (!window.solana || !window.solana.isPhantom) {
+          alert("Phantom Wallet is required. Install it from https://phantom.app");
+          return;
+        }
+
+        statusDiv.innerHTML = "⏳ Connecting to Phantom...";
+
+        // Connect Phantom
+        const resp = await window.solana.connect();
+        const walletAddress = resp.publicKey.toString();
+
+        if (walletAddress !== walletFromUrl) {
+          statusDiv.innerHTML =
+            "<p class='error'>❌ Connected wallet does not match verification request.</p>";
+          return;
+        }
+
+        // IMPORTANT: message MUST match backend EXACTLY
+        const message = `Verify wallet ${walletAddress} nonce ${nonce}`;
+
+        const encodedMessage = new TextEncoder().encode(message);
+        const signed = await window.solana.signMessage(encodedMessage, "utf8");
+
+        const signatureBase58 = bs58.encode(signed.signature);
+
+        statusDiv.innerHTML = "⏳ Verifying signature...";
+
+        // Send to backend
+        const res = await fetch(`${BACKEND_URL}/verify-signature`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet: walletAddress,
+            nonce: nonce,
+            user: userId,
+            signature: signatureBase58
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Verification failed");
+        }
+
+        statusDiv.innerHTML =
+          "<p class='success'>✅ Wallet verified successfully! You can return to Telegram.</p>";
+
+        verifyBtn.disabled = true;
+
+      } catch (err) {
+        statusDiv.innerHTML =
+          `<p class='error'>❌ ${err.message}</p>`;
       }
-
-      // Connect wallet
-      const resp = await window.solana.connect();
-      const walletAddress = resp.publicKey.toString();
-
-      // Read nonce and user ID from query parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const nonce = urlParams.get("nonce");
-      const userId = urlParams.get("user");
-
-      if (!nonce) {
-        alert("Nonce missing in URL!");
-        return;
-      }
-
-      // Construct the exact message for verification
-      const message = `Verify wallet ${walletAddress} nonce ${nonce} at ${Date.now()}`;
-
-      // Encode and sign the message
-      const encodedMessage = new TextEncoder().encode(message);
-      const signedMessage = await window.solana.signMessage(encodedMessage, "utf8");
-
-      // Convert signature to Base58
-      const signatureBase58 = bs58.encode(signedMessage.signature);
-
-      // Show result div
-      resultDiv.style.display = "block";
-      signatureBox.value = signatureBase58;
-
-      // Optional: scroll to signature box automatically
-      signatureBox.scrollIntoView({ behavior: "smooth" });
     };
   </script>
 </body>

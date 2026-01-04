@@ -4,37 +4,81 @@
   <meta charset="UTF-8" />
   <title>Wallet Verification</title>
 
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
+    /* Subtle animated background gradient */
     body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      max-width: 600px;
-      margin: auto;
-      text-align: center;
+      background: radial-gradient(
+        circle at top,
+        #1a1a2e,
+        #0b0b0f 60%
+      );
     }
-    button {
-      padding: 15px 25px;
-      font-size: 16px;
-      cursor: pointer;
+
+    /* Glass card */
+    .glass {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    .status {
-      margin-top: 20px;
-      font-size: 15px;
+
+    /* Button loading spinner */
+    .spinner {
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
     }
-    .success { color: green; }
-    .error { color: red; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
-<body>
-  <h2>🔐 Wallet Verification</h2>
-  <p>
-    Connect your Phantom wallet and sign a message to verify ownership.<br />
-    <strong>No funds will be moved.</strong>
-  </p>
+<body class="min-h-screen flex items-center justify-center text-white">
 
-  <button id="verifyBtn">Connect Phantom & Verify</button>
-  <div id="status" class="status"></div>
+  <main class="w-full max-w-md px-4">
+    <section class="glass rounded-2xl p-8 shadow-2xl text-center">
+
+      <h2 class="text-2xl font-semibold mb-2">
+        🔐 Wallet Verification
+      </h2>
+
+      <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+        Connect your Phantom wallet and sign a message to verify ownership.
+        <br />
+        <span class="font-medium text-gray-200">
+          No funds will ever be moved.
+        </span>
+      </p>
+
+      <button
+        id="verifyBtn"
+        class="w-full py-4 rounded-xl font-medium text-base
+               bg-gradient-to-r from-purple-500 to-cyan-400
+               hover:from-purple-600 hover:to-cyan-500
+               transition-all duration-200
+               disabled:opacity-50 disabled:cursor-not-allowed
+               shadow-lg"
+      >
+        Connect Phantom & Verify
+      </button>
+
+      <div id="status" class="status mt-5 text-sm"></div>
+
+      <p class="mt-6 text-xs text-gray-400">
+        Signatures are used for verification only.<br />
+        Your private keys never leave your wallet.
+      </p>
+
+    </section>
+  </main>
 
   <script>
     // ---------- Base58 encoder (minimal, reliable) ----------
@@ -75,7 +119,7 @@
 
     if (!walletFromUrl || !nonce || !userId) {
       statusDiv.innerHTML =
-        "<p class='error'>❌ Invalid verification link.</p>";
+        "<p class='text-red-400'>❌ Invalid verification link.</p>";
       verifyBtn.disabled = true;
     }
 
@@ -86,19 +130,25 @@
           return;
         }
 
-        statusDiv.textContent = "⏳ Connecting to Phantom…";
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = "<div class='spinner mx-auto'></div>";
+        statusDiv.textContent = "Connecting to Phantom…";
 
         const resp = await window.solana.connect();
         const walletAddress = resp.publicKey.toString();
 
         if (walletAddress !== walletFromUrl) {
           statusDiv.innerHTML =
-            "<p class='error'>❌ Wallet mismatch.</p>";
+            "<p class='text-red-400'>❌ Wallet mismatch.</p>";
+          verifyBtn.innerText = "Connect Phantom & Verify";
+          verifyBtn.disabled = false;
           return;
         }
 
         const message = `Verify wallet ${walletAddress} nonce ${nonce}`;
         const encodedMessage = new TextEncoder().encode(message);
+
+        statusDiv.textContent = "Awaiting signature…";
 
         const signed = await window.solana.signMessage(
           encodedMessage,
@@ -107,7 +157,7 @@
 
         const signatureBase58 = base58Encode(signed.signature);
 
-        statusDiv.textContent = "⏳ Verifying signature…";
+        statusDiv.textContent = "Verifying signature…";
 
         const res = await fetch(`${BACKEND_URL}/verify-signature`, {
           method: "POST",
@@ -118,9 +168,8 @@
             nonce: nonce,
             user: userId,
             signature: signatureBase58,
-         }),
-       });
-
+          }),
+        });
 
         const data = await res.json();
 
@@ -128,13 +177,15 @@
           throw new Error(data.error || "Verification failed");
         }
 
+        verifyBtn.innerText = "Verified ✓";
         statusDiv.innerHTML =
-          "<p class='success'>✅ Wallet verified! Return to Telegram.</p>";
-        verifyBtn.disabled = true;
+          "<p class='text-green-400'>✅ Wallet verified! Return to Telegram.</p>";
 
       } catch (err) {
+        verifyBtn.innerText = "Connect Phantom & Verify";
+        verifyBtn.disabled = false;
         statusDiv.innerHTML =
-          `<p class='error'>❌ ${err.message}</p>`;
+          `<p class='text-red-400'>❌ ${err.message}</p>`;
       }
     };
   </script>

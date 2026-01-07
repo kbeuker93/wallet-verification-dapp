@@ -9,16 +9,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* background gradient */
     body {
-      background: radial-gradient(
-        circle at top,
-        #1a1a2e,
-        #0b0b0f 60%
-      );
+      background: radial-gradient(circle at top, #1a1a2e, #0b0b0f 60%);
     }
 
-    /* Glass card */
     .glass {
       background: rgba(255, 255, 255, 0.06);
       backdrop-filter: blur(14px);
@@ -26,7 +20,6 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    /* Button loading spinner */
     .spinner {
       border: 2px solid rgba(255,255,255,0.3);
       border-top: 2px solid white;
@@ -42,180 +35,185 @@
   </style>
 </head>
 
-<body class="min-h-screen flex items-start justify-center text-white pt-12 sm:pt-12 overflow-x-hidden">
+<body class="min-h-screen flex items-start justify-center text-white pt-12 overflow-x-hidden">
 
-  <main class="w-full max-w-md px-4 -mt-24">
+<main class="w-full max-w-md px-4 -mt-24">
 
-    <!-- Logo -->
-    <div class="mx-auto mb-2 max-w-md">
-      <img
-        src="assets/logo.png"
-        alt="Wallet Verification Bot Logo"
-        class="w-full h-auto object-contain
-               drop-shadow-[0_0_35px_rgba(153,69,255,0.45)]"
-      />
-    </div>
+  <div class="mx-auto mb-2 max-w-md">
+    <img src="assets/logo.png" class="w-full drop-shadow-[0_0_35px_rgba(153,69,255,0.45)]" />
+  </div>
 
-    <!-- WalletWarden text -->
-    <div class="mx-auto mb-0 max-w-md -mt-32">
-      <img
-        src="assets/walletwarden-text.png"
-        alt="WalletWarden"
-        class="w-full h-auto object-contain
-               drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]"
-      />
-    </div>
+  <div class="mx-auto -mt-32">
+    <img src="assets/walletwarden-text.png" class="w-full drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]" />
+  </div>
 
-    <!-- Glass card -->
-    <section class="glass rounded-2xl p-6 sm:p-7 shadow-2xl text-center -mt-10">
+  <section class="glass rounded-2xl p-6 shadow-2xl text-center -mt-10">
 
-      <h2 class="text-xl font-semibold mb-2">
-        🔐 Wallet Verification
-      </h2>
+    <h2 class="text-xl font-semibold mb-2">🔐 Wallet Verification</h2>
 
-      <p class="text-sm text-gray-300 mb-5 leading-relaxed">
-        Connect your Phantom wallet and sign a message to verify ownership.
-        <br />
-        <span class="font-medium text-gray-200">
-          No funds will ever be moved.
-        </span>
-      </p>
+    <p class="text-sm text-gray-300 mb-5">
+      Connect your Phantom wallet and sign a message.<br />
+      <span class="text-gray-200">No funds will ever be moved.</span>
+    </p>
 
-      <button
-        id="verifyBtn"
-        class="w-full py-3.5 rounded-xl font-medium text-base
-               bg-gradient-to-r from-purple-500 to-cyan-400
-               hover:from-purple-600 hover:to-cyan-500
-               transition-all duration-200
-               disabled:opacity-50 disabled:cursor-not-allowed
-               shadow-lg"
-      >
-        Connect Phantom & Verify
-      </button>
+    <button
+      id="verifyBtn"
+      class="w-full py-3.5 rounded-xl font-medium
+             bg-gradient-to-r from-purple-500 to-cyan-400
+             hover:from-purple-600 hover:to-cyan-500
+             transition-all shadow-lg"
+    >
+      Connect Phantom & Verify
+    </button>
 
-      <div id="status" class="status mt-4 text-sm"></div>
+    <div id="status" class="mt-4 text-sm"></div>
 
-      <p class="mt-4 text-[11px] text-gray-400">
-        Signatures are used for verification only.<br />
-        Your private keys never leave your wallet.
-      </p>
+    <p class="mt-4 text-[11px] text-gray-400">
+      Your private keys never leave your wallet.
+    </p>
 
-    </section>
-  </main>
+  </section>
+</main>
 
-  <!-- Footer -->
-  <footer class="fixed bottom-3 left-0 right-0 text-center text-[10px] text-gray-500 pointer-events-none">
-    © 2026 WalletWarden. All rights reserved.
-  </footer>
+<footer class="fixed bottom-3 text-center text-[10px] text-gray-500 w-full">
+  © 2026 WalletWarden. All rights reserved.
+</footer>
 
-  <script>
-    // ---------- Base58 encoder (minimal, reliable) ----------
-    const BASE58_ALPHABET =
-      "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+<script>
+  // ---------- Mobile & Telegram detection ----------
+  function isMobile() {
+    return /iphone|ipad|android/i.test(navigator.userAgent);
+  }
 
-    function base58Encode(buffer) {
-      let digits = [0];
-      for (let i = 0; i < buffer.length; i++) {
-        let carry = buffer[i];
-        for (let j = 0; j < digits.length; j++) {
-          carry += digits[j] << 8;
-          digits[j] = carry % 58;
-          carry = (carry / 58) | 0;
-        }
-        while (carry) {
-          digits.push(carry % 58);
-          carry = (carry / 58) | 0;
+  function isTelegramBrowser() {
+    return /Telegram/i.test(navigator.userAgent);
+  }
+
+  // ---------- Base58 encoder ----------
+  const BASE58_ALPHABET =
+    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  function base58Encode(buffer) {
+    let digits = [0];
+    for (let i = 0; i < buffer.length; i++) {
+      let carry = buffer[i];
+      for (let j = 0; j < digits.length; j++) {
+        carry += digits[j] << 8;
+        digits[j] = carry % 58;
+        carry = (carry / 58) | 0;
+      }
+      while (carry) {
+        digits.push(carry % 58);
+        carry = (carry / 58) | 0;
+      }
+    }
+    return digits.reverse().map(d => BASE58_ALPHABET[d]).join("");
+  }
+
+  // ---------- Config ----------
+  const verifyBtn = document.getElementById("verifyBtn");
+  const statusDiv = document.getElementById("status");
+  const BACKEND_URL = "https://wallet-verification-backend.onrender.com";
+
+  const params = new URLSearchParams(window.location.search);
+  const nonce = params.get("nonce");
+  const userId = params.get("user");
+
+  // Restore from local storage if Phantom redirected back
+  if ((!nonce || !userId) && localStorage.getItem("pendingVerification")) {
+    const saved = JSON.parse(localStorage.getItem("pendingVerification"));
+    if (saved.nonce && saved.userId) {
+      window.location.href = `${window.location.pathname}?nonce=${saved.nonce}&user=${saved.userId}`;
+      localStorage.removeItem("pendingVerification");
+      return;
+    }
+  }
+
+  if (!nonce || !userId) {
+    statusDiv.innerHTML =
+      "<p class='text-red-400'>❌ Invalid verification link.</p>";
+    verifyBtn.disabled = true;
+  }
+
+  // ---------- Telegram in-app browser message ----------
+  if (isTelegramBrowser()) {
+    statusDiv.innerHTML =
+      "<p class='text-yellow-400'>⚠️ Please open this page in Safari or Chrome to connect your Phantom Wallet.</p>";
+  }
+
+  // ---------- Verify button ----------
+  verifyBtn.onclick = async () => {
+    try {
+      // 📱 Mobile: deep link into Phantom if not injected yet
+      if (!window.solana || !window.solana.isPhantom) {
+        if (isMobile()) {
+          const appUrl = window.location.origin + window.location.pathname;
+          const redirectUrl = `${appUrl}?nonce=${nonce}&user=${userId}`;
+
+          // Save state before redirect (helps after Phantom returns)
+          localStorage.setItem(
+            "pendingVerification",
+            JSON.stringify({ nonce, userId })
+          );
+
+          // Proper Phantom mobile deep link
+          const deepLink = `phantom://ul/v1/connect?app_url=${encodeURIComponent(
+            appUrl
+          )}&redirect_link=${encodeURIComponent(redirectUrl)}&name=${encodeURIComponent(
+            "WalletWarden Verification"
+          )}`;
+
+          window.location.replace(deepLink);
+          return;
+        } else {
+          window.open("https://phantom.app", "_blank");
+          return;
         }
       }
-      return digits
-        .reverse()
-        .map((d) => BASE58_ALPHABET[d])
-        .join("");
-    }
 
-    // ---------- Config ----------
-    const verifyBtn = document.getElementById("verifyBtn");
-    const statusDiv = document.getElementById("status");
-
-    const BACKEND_URL =
-      "https://wallet-verification-backend.onrender.com";
-
-    const params = new URLSearchParams(window.location.search);
-    const walletFromUrl = params.get("wallet");
-    const nonce = params.get("nonce");
-    const userId = params.get("user");
-
-    if (!walletFromUrl || !nonce || !userId) {
-      statusDiv.innerHTML =
-        "<p class='text-red-400'>❌ Invalid verification link.</p>";
+      // ---------- Continue with verification ----------
       verifyBtn.disabled = true;
+      verifyBtn.innerHTML = "<div class='spinner mx-auto'></div>";
+      statusDiv.textContent = "Connecting to Phantom…";
+
+      const resp = await window.solana.connect();
+      const walletAddress = resp.publicKey.toString();
+
+      const message = `Verify wallet ownership for Telegram\nNonce: ${nonce}`;
+      const encodedMessage = new TextEncoder().encode(message);
+
+      statusDiv.textContent = "Awaiting signature…";
+
+      const signed = await window.solana.signMessage(encodedMessage, "utf8");
+      const signatureBase58 = base58Encode(signed.signature);
+
+      statusDiv.textContent = "Verifying signature…";
+
+      const res = await fetch(`${BACKEND_URL}/verify-signature`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          nonce,
+          user: userId,
+          signature: signatureBase58,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Verification failed");
+
+      verifyBtn.innerText = "Verified ✓";
+      statusDiv.innerHTML =
+        "<p class='text-green-400'>✅ Wallet verified! You may return to Telegram.</p>";
+
+    } catch (err) {
+      verifyBtn.innerText = "Connect Phantom & Verify";
+      verifyBtn.disabled = false;
+      statusDiv.innerHTML = `<p class='text-red-400'>❌ ${err.message}</p>`;
     }
+  };
+</script>
 
-    verifyBtn.onclick = async () => {
-      try {
-        if (!window.solana || !window.solana.isPhantom) {
-          alert("Phantom Wallet is required: https://phantom.app");
-          return;
-        }
-
-        verifyBtn.disabled = true;
-        verifyBtn.innerHTML = "<div class='spinner mx-auto'></div>";
-        statusDiv.textContent = "Connecting to Phantom…";
-
-        const resp = await window.solana.connect();
-        const walletAddress = resp.publicKey.toString();
-
-        if (walletAddress !== walletFromUrl) {
-          statusDiv.innerHTML =
-            "<p class='text-red-400'>❌ Wallet mismatch.</p>";
-          verifyBtn.innerText = "Connect Phantom & Verify";
-          verifyBtn.disabled = false;
-          return;
-        }
-
-        const message = `Verify wallet ${walletAddress} nonce ${nonce}`;
-        const encodedMessage = new TextEncoder().encode(message);
-
-        statusDiv.textContent = "Awaiting signature…";
-
-        const signed = await window.solana.signMessage(
-          encodedMessage,
-          "utf8"
-        );
-
-        const signatureBase58 = base58Encode(signed.signature);
-
-        statusDiv.textContent = "Verifying signature…";
-
-        const res = await fetch(`${BACKEND_URL}/verify-signature`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "omit",
-          body: JSON.stringify({
-            wallet: walletAddress,
-            nonce: nonce,
-            user: userId,
-            signature: signatureBase58,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Verification failed");
-        }
-
-        verifyBtn.innerText = "Verified ✓";
-        statusDiv.innerHTML =
-          "<p class='text-green-400'>✅ Wallet verified! Return to Telegram.</p>";
-
-      } catch (err) {
-        verifyBtn.innerText = "Connect Phantom & Verify";
-        verifyBtn.disabled = false;
-        statusDiv.innerHTML =
-          `<p class='text-red-400'>❌ ${err.message}</p>`;
-      }
-    };
-  </script>
 </body>
 </html>

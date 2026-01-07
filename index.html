@@ -39,17 +39,14 @@
 
 <main class="w-full max-w-md px-4 -mt-24">
 
-  <!-- Logo -->
   <div class="mx-auto mb-2 max-w-md">
     <img src="assets/logo.png" class="w-full drop-shadow-[0_0_35px_rgba(153,69,255,0.45)]" />
   </div>
 
-  <!-- WalletWarden text -->
   <div class="mx-auto -mt-32">
     <img src="assets/walletwarden-text.png" class="w-full drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]" />
   </div>
 
-  <!-- Glass card -->
   <section class="glass rounded-2xl p-6 shadow-2xl text-center -mt-10">
 
     <h2 class="text-xl font-semibold mb-2">🔐 Wallet Verification</h2>
@@ -83,6 +80,9 @@
 </footer>
 
 <script>
+  // ---------- Mobile detection ----------
+  const isMobile = /iphone|ipad|android/i.test(navigator.userAgent);
+
   // ---------- Base58 encoder ----------
   const BASE58_ALPHABET =
     "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -119,10 +119,21 @@
     verifyBtn.disabled = true;
   }
 
+  // 📱 Mobile behavior (Phantom already handled signing)
+  if (isMobile) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerText = "Verification handled in Phantom app";
+    statusDiv.innerHTML =
+      "<p class='text-green-400'>📱 Signature completed in Phantom.<br />You may now return to Telegram.</p>";
+  }
+
+  // 🖥 Desktop behavior (browser Phantom extension)
   verifyBtn.onclick = async () => {
+    if (isMobile) return;
+
     try {
       if (!window.solana || !window.solana.isPhantom) {
-        alert("Phantom Wallet is required.");
+        alert("Phantom browser extension is required.");
         return;
       }
 

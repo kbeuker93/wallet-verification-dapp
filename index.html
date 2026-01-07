@@ -156,16 +156,22 @@
             JSON.stringify({ nonce, userId })
           );
 
-          // Proper Phantom mobile deep link
+          // Proper Phantom mobile deep link with fallback
           const deepLink = `phantom://ul/v1/connect?app_url=${encodeURIComponent(
             appUrl
-          )}&redirect_link=${encodeURIComponent(redirectUrl)}&name=${encodeURIComponent(
-            "WalletWarden Verification"
-          )}`;
+          )}&redirect_link=${encodeURIComponent(
+            redirectUrl
+          )}&name=${encodeURIComponent("WalletWarden Verification")}`;
 
-          window.location.replace(deepLink);
+          // Try to open Phantom app; fallback if not installed
+          window.location.href = deepLink;
+          setTimeout(() => {
+            // If Phantom didn’t open, go to its website
+            window.location.href = "https://phantom.app";
+          }, 1200);
           return;
         } else {
+          // Desktop: open Phantom website for info/download
           window.open("https://phantom.app", "_blank");
           return;
         }

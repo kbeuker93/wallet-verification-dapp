@@ -1,86 +1,186 @@
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const nonce = params.get("nonce");
-  const userId = params.get("user");
-  const phantomSig = params.get("signature");
-  const phantomPubkey = params.get("publicKey");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Wallet Verification</title>
 
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #1a1a2e, #0b0b0f 60%);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .spinner {
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-start justify-center text-white pt-12 overflow-x-hidden">
+
+<main class="w-full max-w-md px-4 -mt-24">
+
+  <div class="mx-auto mb-2 max-w-md">
+    <img src="assets/logo.png" class="w-full drop-shadow-[0_0_35px_rgba(153,69,255,0.45)]" />
+  </div>
+
+  <div class="mx-auto -mt-32">
+    <img src="assets/walletwarden-text.png" class="w-full drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]" />
+  </div>
+
+  <section class="glass rounded-2xl p-6 shadow-2xl text-center -mt-10">
+
+    <h2 class="text-xl font-semibold mb-2">🔐 Wallet Verification</h2>
+
+    <p class="text-sm text-gray-300 mb-5">
+      Connect your Phantom wallet and sign a message.<br />
+      <span class="text-gray-200">No funds will ever be moved.</span>
+    </p>
+
+    <button
+      id="verifyBtn"
+      class="w-full py-3.5 rounded-xl font-medium
+             bg-gradient-to-r from-purple-500 to-cyan-400
+             hover:from-purple-600 hover:to-cyan-500
+             transition-all shadow-lg"
+    >
+      Connect Phantom & Verify
+    </button>
+
+    <div id="status" class="mt-4 text-sm"></div>
+
+    <p class="mt-4 text-[11px] text-gray-400">
+      Your private keys never leave your wallet.
+    </p>
+
+  </section>
+</main>
+
+<footer class="fixed bottom-3 text-center text-[10px] text-gray-500 w-full">
+  © 2026 WalletWarden. All rights reserved.
+</footer>
+
+<script>
+  // ---------- Mobile detection ----------
+  const isMobile = /iphone|ipad|android/i.test(navigator.userAgent);
+
+  // ---------- Base58 encoder ----------
+  const BASE58_ALPHABET =
+    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  function base58Encode(buffer) {
+    let digits = [0];
+    for (let i = 0; i < buffer.length; i++) {
+      let carry = buffer[i];
+      for (let j = 0; j < digits.length; j++) {
+        carry += digits[j] << 8;
+        digits[j] = carry % 58;
+        carry = (carry / 58) | 0;
+      }
+      while (carry) {
+        digits.push(carry % 58);
+        carry = (carry / 58) | 0;
+      }
+    }
+    return digits.reverse().map(d => BASE58_ALPHABET[d]).join("");
+  }
+
+  // ---------- Config ----------
   const verifyBtn = document.getElementById("verifyBtn");
   const statusDiv = document.getElementById("status");
   const BACKEND_URL = "https://wallet-verification-backend.onrender.com";
 
-  // 📱 Mobile auto-verify after Phantom redirect
-  if (phantomSig && phantomPubkey) {
+  const params = new URLSearchParams(window.location.search);
+  const nonce = params.get("nonce");
+  const userId = params.get("user");
+
+  if (!nonce || !userId) {
+    statusDiv.innerHTML =
+      "<p class='text-red-400'>❌ Invalid verification link.</p>";
     verifyBtn.disabled = true;
-    verifyBtn.innerText = "Verifying…";
-    statusDiv.innerText = "🔐 Verifying signature…";
-
-    fetch(`${BACKEND_URL}/verify-signature`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        wallet: phantomPubkey,
-        nonce,
-        user: userId,
-        signature: phantomSig
-      })
-    })
-      .then(r => r.json())
-      .then(() => {
-        verifyBtn.innerText = "Verified ✓";
-        statusDiv.innerHTML =
-          "<p class='text-green-400'>✅ Wallet verified. Return to Telegram.</p>";
-      })
-      .catch(err => {
-        statusDiv.innerHTML =
-          `<p class='text-red-400'>❌ ${err.message}</p>`;
-      });
-
-    return;
   }
 
-  // 🖥 Desktop manual signing
+  // 📱 Mobile behavior (Phantom already handled signing)
+  if (isMobile) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerText = "Verification handled in Phantom app";
+    statusDiv.innerHTML =
+      "<p class='text-green-400'>📱 Signature completed in Phantom.<br />You may now return to Telegram.</p>";
+  }
+
+  // 🖥 Desktop behavior (browser Phantom extension)
   verifyBtn.onclick = async () => {
+    if (isMobile) return;
+
     try {
       if (!window.solana || !window.solana.isPhantom) {
-        alert("Phantom extension required.");
+        alert("Phantom browser extension is required.");
         return;
       }
 
       verifyBtn.disabled = true;
-      statusDiv.innerText = "Connecting…";
+      verifyBtn.innerHTML = "<div class='spinner mx-auto'></div>";
+      statusDiv.textContent = "Connecting to Phantom…";
 
       const resp = await window.solana.connect();
-      const wallet = resp.publicKey.toString();
+      const walletAddress = resp.publicKey.toString();
 
-      const msg = `Verify wallet ownership for Telegram\nNonce: ${nonce}`;
-      const signed = await window.solana.signMessage(
-        new TextEncoder().encode(msg),
-        "utf8"
-      );
+      const message =
+        `Verify wallet ownership for Telegram\nNonce: ${nonce}`;
 
-      const sig = base58Encode(signed.signature);
+      const encodedMessage = new TextEncoder().encode(message);
 
-      await fetch(`${BACKEND_URL}/verify-signature`, {
+      statusDiv.textContent = "Awaiting signature…";
+
+      const signed = await window.solana.signMessage(encodedMessage, "utf8");
+      const signatureBase58 = base58Encode(signed.signature);
+
+      statusDiv.textContent = "Verifying signature…";
+
+      const res = await fetch(`${BACKEND_URL}/verify-signature`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          wallet,
+          wallet: walletAddress,
           nonce,
           user: userId,
-          signature: sig
+          signature: signatureBase58
         })
       });
 
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Verification failed");
+
       verifyBtn.innerText = "Verified ✓";
       statusDiv.innerHTML =
-        "<p class='text-green-400'>✅ Wallet verified. Return to Telegram.</p>";
+        "<p class='text-green-400'>✅ Wallet verified! You may return to Telegram.</p>";
 
     } catch (err) {
-      verifyBtn.disabled = false;
       verifyBtn.innerText = "Connect Phantom & Verify";
+      verifyBtn.disabled = false;
       statusDiv.innerHTML =
         `<p class='text-red-400'>❌ ${err.message}</p>`;
     }
   };
 </script>
+</body>
+</html>

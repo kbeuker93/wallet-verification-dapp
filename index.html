@@ -125,25 +125,39 @@
     verifyBtn.disabled = true;
   }
 
-  // 🚫 Telegram mobile WebView: show instructions only
+  // 🚫 Telegram mobile WebView → force open in browser via user action
   if (isMobile() && isTelegramWebView()) {
-    verifyBtn.disabled = true;
-    verifyBtn.classList.add("opacity-50", "cursor-not-allowed");
+    const currentUrl = window.location.href;
+
+    verifyBtn.outerHTML = `
+      <a
+        href="${currentUrl}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="block w-full py-3.5 rounded-xl font-medium text-center
+               bg-gradient-to-r from-purple-500 to-cyan-400
+               hover:from-purple-600 hover:to-cyan-500
+               transition-all shadow-lg"
+      >
+        Open in browser to verify
+      </a>
+    `;
 
     statusDiv.innerHTML = `
-      <p class="text-yellow-400 font-medium mb-2">⚠️ Telegram browser limitation</p>
+      <p class="text-yellow-400 font-medium mb-2">⚠️ Telegram limitation</p>
       <p class="text-sm text-gray-300">
-        To verify on mobile:
+        Wallet verification does not work inside Telegram.
         <br /><br />
-        1️⃣ Tap <strong>⋯</strong> in the top-right<br />
-        2️⃣ Select <strong>Open in browser</strong><br />
-        3️⃣ Verify with Phantom there
+        Tap the button above to open this page in your browser,
+        then verify with Phantom.
       </p>
     `;
   }
 
-  // ---------- Verify button (desktop & real mobile browsers only) ----------
+  // ---------- Verify button (desktop & real browsers only) ----------
   verifyBtn.onclick = async () => {
+    if (isMobile() && isTelegramWebView()) return;
+
     try {
       if (!window.solana || !window.solana.isPhantom) {
         window.open("https://phantom.app", "_blank");

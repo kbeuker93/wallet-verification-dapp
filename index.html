@@ -80,12 +80,12 @@
 </footer>
 
 <script>
-  // ---------- Mobile & Telegram detection ----------
+  // ---------- Environment detection ----------
   function isMobile() {
     return /iphone|ipad|android/i.test(navigator.userAgent);
   }
 
-  function isTelegramBrowser() {
+  function isTelegramWebView() {
     return /Telegram/i.test(navigator.userAgent);
   }
 
@@ -119,65 +119,37 @@
   const nonce = params.get("nonce");
   const userId = params.get("user");
 
-  // Restore from local storage if Phantom redirected back
-  if ((!nonce || !userId) && localStorage.getItem("pendingVerification")) {
-    const saved = JSON.parse(localStorage.getItem("pendingVerification"));
-    if (saved.nonce && saved.userId) {
-      window.location.href = `${window.location.pathname}?nonce=${saved.nonce}&user=${saved.userId}`;
-      localStorage.removeItem("pendingVerification");
-      return;
-    }
-  }
-
   if (!nonce || !userId) {
     statusDiv.innerHTML =
       "<p class='text-red-400'>❌ Invalid verification link.</p>";
     verifyBtn.disabled = true;
   }
 
-  // ---------- Telegram in-app browser message ----------
-  if (isTelegramBrowser()) {
-    statusDiv.innerHTML =
-      "<p class='text-yellow-400'>⚠️ Please open this page in Safari or Chrome to connect your Phantom Wallet.</p>";
+  // 🚫 Telegram mobile WebView: show instructions only
+  if (isMobile() && isTelegramWebView()) {
+    verifyBtn.disabled = true;
+    verifyBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+    statusDiv.innerHTML = `
+      <p class="text-yellow-400 font-medium mb-2">⚠️ Telegram browser limitation</p>
+      <p class="text-sm text-gray-300">
+        To verify on mobile:
+        <br /><br />
+        1️⃣ Tap <strong>⋯</strong> in the top-right<br />
+        2️⃣ Select <strong>Open in browser</strong><br />
+        3️⃣ Verify with Phantom there
+      </p>
+    `;
   }
 
-  // ---------- Verify button ----------
+  // ---------- Verify button (desktop & real mobile browsers only) ----------
   verifyBtn.onclick = async () => {
     try {
-      // 📱 Mobile: deep link into Phantom if not injected yet
       if (!window.solana || !window.solana.isPhantom) {
-        if (isMobile()) {
-          const appUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${appUrl}?nonce=${nonce}&user=${userId}`;
-
-          // Save state before redirect (helps after Phantom returns)
-          localStorage.setItem(
-            "pendingVerification",
-            JSON.stringify({ nonce, userId })
-          );
-
-          // Proper Phantom mobile deep link with fallback
-          const deepLink = `phantom://ul/v1/connect?app_url=${encodeURIComponent(
-            appUrl
-          )}&redirect_link=${encodeURIComponent(
-            redirectUrl
-          )}&name=${encodeURIComponent("WalletWarden Verification")}`;
-
-          // Try to open Phantom app; fallback if not installed
-          window.location.href = deepLink;
-          setTimeout(() => {
-            // If Phantom didn’t open, go to its website
-            window.location.href = "https://phantom.app";
-          }, 1200);
-          return;
-        } else {
-          // Desktop: open Phantom website for info/download
-          window.open("https://phantom.app", "_blank");
-          return;
-        }
+        window.open("https://phantom.app", "_blank");
+        return;
       }
 
-      // ---------- Continue with verification ----------
       verifyBtn.disabled = true;
       verifyBtn.innerHTML = "<div class='spinner mx-auto'></div>";
       statusDiv.textContent = "Connecting to Phantom…";
@@ -202,8 +174,8 @@
           wallet: walletAddress,
           nonce,
           user: userId,
-          signature: signatureBase58,
-        }),
+          signature: signatureBase58
+        })
       });
 
       const data = await res.json();
@@ -216,7 +188,8 @@
     } catch (err) {
       verifyBtn.innerText = "Connect Phantom & Verify";
       verifyBtn.disabled = false;
-      statusDiv.innerHTML = `<p class='text-red-400'>❌ ${err.message}</p>`;
+      statusDiv.innerHTML =
+        `<p class='text-red-400'>❌ ${err.message}</p>`;
     }
   };
 </script>

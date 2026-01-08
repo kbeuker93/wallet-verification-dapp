@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Wallet Verification</title>
 
+  <!-- Base58 (REAL encoder) -->
+  <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -56,8 +60,7 @@
       class="w-full py-3.5 rounded-xl font-medium
              bg-gradient-to-r from-purple-500 to-cyan-400
              hover:from-purple-600 hover:to-cyan-500
-             transition-all shadow-lg"
-    >
+             transition-all shadow-lg">
       Connect Phantom & Verify
     </button>
 
@@ -96,9 +99,7 @@
     verifyBtn.disabled = true;
   }
 
-  /* ===========================
-     TELEGRAM MOBILE HANDLING
-     =========================== */
+  // 🚫 Telegram WebView: instructions only
   if (isMobile() && isTelegramWebView()) {
     const url = window.location.href;
 
@@ -116,18 +117,13 @@
       <p class="text-yellow-400 font-medium mb-2">⚠️ Telegram limitation</p>
       <p class="text-sm text-gray-300">
         Wallet verification cannot run inside Telegram.<br /><br />
-        Tap the button above, open this page in your browser,
-        then verify with Phantom.
+        Open this page in your browser or Phantom app to continue.
       </p>
     `;
-
-    // STOP here — do not attach Phantom logic
     throw new Error("Telegram WebView detected");
   }
 
-  /* ===========================
-     NORMAL VERIFICATION FLOW
-     =========================== */
+  // ✅ Normal verification flow (desktop + Phantom mobile)
   verifyBtn.onclick = async () => {
     try {
       if (!window.solana || !window.solana.isPhantom) {
@@ -148,9 +144,9 @@
       statusDiv.textContent = "Awaiting signature…";
 
       const signed = await window.solana.signMessage(encoded, "utf8");
-      const sig = Array.from(signed.signature)
-        .map(b => "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[b % 58])
-        .join("");
+
+      // ✅ REAL base58 encoding
+      const signature = bs58.encode(signed.signature);
 
       statusDiv.textContent = "Verifying signature…";
 
@@ -161,7 +157,7 @@
           wallet: walletAddress,
           nonce,
           user: userId,
-          signature: sig
+          signature
         })
       });
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Wallet Verification</title>
 
-  <!-- Base58 (REAL encoder) -->
+  <!-- Base58 library -->
   <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
 
   <!-- Tailwind -->
@@ -78,6 +78,19 @@
 </footer>
 
 <script>
+  /* ===========================
+     Base58 compatibility wrapper
+     =========================== */
+  function encodeBase58(bytes) {
+    if (window.bs58 && window.bs58.encode) {
+      return window.bs58.encode(bytes);
+    }
+    if (window.bs58 && window.bs58.default && window.bs58.default.encode) {
+      return window.bs58.default.encode(bytes);
+    }
+    throw new Error("Base58 encoder not available");
+  }
+
   function isMobile() {
     return /iphone|ipad|android/i.test(navigator.userAgent);
   }
@@ -123,7 +136,7 @@
     throw new Error("Telegram WebView detected");
   }
 
-  // ✅ Normal verification flow (desktop + Phantom mobile)
+  // ✅ Normal verification flow
   verifyBtn.onclick = async () => {
     try {
       if (!window.solana || !window.solana.isPhantom) {
@@ -145,8 +158,7 @@
 
       const signed = await window.solana.signMessage(encoded, "utf8");
 
-      // ✅ REAL base58 encoding
-      const signature = bs58.encode(signed.signature);
+      const signature = encodeBase58(signed.signature);
 
       statusDiv.textContent = "Verifying signature…";
 
